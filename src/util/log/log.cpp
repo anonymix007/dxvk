@@ -4,6 +4,10 @@
 
 #include "../util_env.h"
 
+#ifdef DXVK_BUILD_UMD
+extern "C" int __cdecl DXVK_umd_log_output(const char *);
+#endif
+
 namespace dxvk {
   
   Logger::Logger(const std::string& fileName)
@@ -55,7 +59,9 @@ namespace dxvk {
       const char* prefix = s_prefixes.at(static_cast<uint32_t>(level));
 
       if (!std::exchange(m_initialized, true)) {
-#ifdef _WIN32
+#if defined(DXVK_BUILD_UMD)
+        m_wineLogOutput = DXVK_umd_log_output;
+#elif defined(_WIN32)
         HMODULE ntdll = GetModuleHandleA("ntdll.dll");
 
         if (ntdll)

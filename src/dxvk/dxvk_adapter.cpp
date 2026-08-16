@@ -29,6 +29,7 @@ namespace dxvk {
     m_capabilities  (instance, handle, nullptr) {
     const auto& properties = m_capabilities.getProperties();
 
+#ifndef DXVK_BUILD_UMD
     if (properties.vk11.deviceLUIDValid) {
       D3DKMT_OPENADAPTERFROMLUID open = { };
       memcpy(&open.AdapterLuid, properties.vk11.deviceLUID, sizeof(open.AdapterLuid));
@@ -38,15 +39,18 @@ namespace dxvk {
       else
         m_kmtLocal = open.hAdapter;
     }
+#endif
   }
   
   
   DxvkAdapter::~DxvkAdapter() {
+#ifndef DXVK_BUILD_UMD
     if (m_kmtLocal) {
       D3DKMT_CLOSEADAPTER close = { };
       close.hAdapter = m_kmtLocal;
       D3DKMTCloseAdapter(&close);
     }
+#endif
   }
 
 

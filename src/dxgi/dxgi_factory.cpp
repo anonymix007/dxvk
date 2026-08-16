@@ -9,7 +9,10 @@
 
 namespace dxvk {
 
+#ifndef DXVK_BUILD_UMD
   static Singleton<DxvkInstance>   g_dxvkInstance;
+#endif
+
   static Singleton<DxgiOptions>    g_dxgiOptions;
 
   static dxvk::mutex               s_globalHDRStateMutex;
@@ -78,9 +81,17 @@ namespace dxvk {
     return S_OK;
   }
 
-
   DxgiFactory::DxgiFactory(UINT Flags)
-  : m_instance        (g_dxvkInstance.acquire(0)),
+  : DxgiFactory(DxvkInstanceImportInfo(), Flags) {
+
+  }
+
+  DxgiFactory::DxgiFactory(const DxvkInstanceImportInfo &args, UINT Flags)
+#ifndef DXVK_BUILD_UMD
+  : m_instance        (g_dxvkInstance.acquire(args, 0)),
+#else
+  : m_instance        (new DxvkInstance(args, 0)),
+#endif
     m_interop         (this),
     m_options         (g_dxgiOptions.acquire(m_instance->config())),
     m_monitorInfo     (this, *m_options),
@@ -92,6 +103,7 @@ namespace dxvk {
     // filter options are used.
     std::vector<HMONITOR> monitors;
 
+#ifndef DXVK_BUILD_UMD
     for (uint32_t i = 0; ; i++) {
       HMONITOR hmon = wsi::enumMonitors(i);
 
@@ -126,7 +138,7 @@ namespace dxvk {
         }
       }
     }
-
+#endif
     // If any monitors are left on the list, enable the
     // fallback to always enumerate all monitors.
     if ((m_monitorFallback = !monitors.empty()))
@@ -136,7 +148,9 @@ namespace dxvk {
   
   DxgiFactory::~DxgiFactory() {
     g_dxgiOptions.release();
+#ifndef DXVK_BUILD_UMD
     g_dxvkInstance.release();
+#endif
   }
   
   
@@ -528,6 +542,10 @@ namespace dxvk {
     const DXGI_SWAP_CHAIN_FULLSCREEN_DESC* pFullscreenDesc,
           IDXGIOutput*          pRestrictToOutput,
           IDXGISwapChain1**     ppSwapChain) {
+#ifdef DXVK_BUILD_UMD
+    Logger::err("DxgiFactory::CreateSwapChainBase: Not supported for UMD");
+    return DXGI_ERROR_UNSUPPORTED;
+#else
     // Make sure the back buffer size is not zero
     DXGI_SWAP_CHAIN_DESC1 desc = *pDesc;
 
@@ -576,6 +594,7 @@ namespace dxvk {
     // Wrap object in swap chain dispatcher
     *ppSwapChain = new DxgiSwapChainDispatcher(frontendSwapChain.ref(), pDevice);
     return S_OK;
+#endif
   }
 
 

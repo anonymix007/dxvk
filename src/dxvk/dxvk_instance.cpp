@@ -5,6 +5,9 @@
 #include "dxvk_openvr.h"
 #include "dxvk_openxr.h"
 #include "dxvk_platform_exts.h"
+#ifdef DXVK_BUILD_UMD
+#include "dxvk_umd_exts.h"
+#endif
 
 #include "../wsi/wsi_platform.h"
 
@@ -27,7 +30,9 @@ namespace dxvk {
     Logger::info(str::format("DXVK: ", DXVK_VERSION));
     Logger::info(str::format("Build: ", DXVK_TARGET, " ", DXVK_COMPILER, " ", DXVK_COMPILER_VERSION));
 
+#ifndef DXVK_BUILD_UMD
     wsi::init();
+#endif
 
     m_config = Config::getUserConfig();
     m_config.merge(Config::getAppConfig(env::getExePath()));
@@ -40,10 +45,14 @@ namespace dxvk {
       throw DxvkError("Failed to load vulkan-1 library.");
 
     // Initialize extension providers
+#ifdef DXVK_BUILD_UMD
+    m_extProviders.push_back(&DxvkUMDExts::s_instance);
+#else
     m_extProviders.push_back(&DxvkPlatformExts::s_instance);
 #ifdef _WIN32
     m_extProviders.push_back(&VrInstance::s_instance);
     m_extProviders.push_back(&DxvkXrProvider::s_instance);
+#endif
 #endif
 
     Logger::info("Extension providers:");
@@ -65,7 +74,9 @@ namespace dxvk {
     if (m_messenger)
       m_vki->vkDestroyDebugUtilsMessengerEXT(m_vki->instance(), m_messenger, nullptr);
 
+#ifndef DXVK_BUILD_UMD
     wsi::quit();
+#endif
   }
   
   

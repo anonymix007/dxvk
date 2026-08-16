@@ -57,6 +57,7 @@ namespace dxvk {
     
   public:
     
+    DxgiFactory(const DxvkInstanceImportInfo &args, UINT Flags);
     DxgiFactory(UINT Flags);
     ~DxgiFactory();
     

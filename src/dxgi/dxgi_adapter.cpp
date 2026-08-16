@@ -167,7 +167,10 @@ namespace dxvk {
           UINT                      Output,
           IDXGIOutput**             ppOutput) {
     InitReturnPtr(ppOutput);
-    
+#ifdef DXVK_BUILD_UMD
+    Logger::err("DxgiAdapter::EnumOutputs: Not supported for UMD");
+    return DXGI_ERROR_NOT_FOUND;
+#else
     if (ppOutput == nullptr)
       return E_INVALIDARG;
 
@@ -212,6 +215,7 @@ namespace dxvk {
 
     *ppOutput = ref(new DxgiOutput(m_factory, this, monitor));
     return S_OK;
+#endif
   }
   
   

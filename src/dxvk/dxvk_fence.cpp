@@ -74,11 +74,13 @@ namespace dxvk {
       }
       m_thread.join();
     }
+#ifndef DXVK_BUILD_UMD
     if (m_kmtLocal) {
       D3DKMT_DESTROYSYNCHRONIZATIONOBJECT desc = { };
       desc.hSyncObject = m_kmtLocal;
       D3DKMTDestroySynchronizationObject(&desc);
     }
+#endif
     m_vkd->vkDestroySemaphore(m_vkd->device(), m_semaphore, nullptr);
   }
 
@@ -195,7 +197,9 @@ namespace dxvk {
 
 
   void DxvkFence::initKmtHandles() {
-#ifdef _WIN32
+#if defined(DXVK_BUILD_UMD)
+    /* Do nothing */
+#elif defined(_WIN32)
     VkSemaphoreGetWin32HandleInfoKHR win32HandleInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_GET_WIN32_HANDLE_INFO_KHR };
     win32HandleInfo.semaphore = m_semaphore;
     win32HandleInfo.handleType = m_info.sharedType;

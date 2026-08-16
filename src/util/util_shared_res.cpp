@@ -7,7 +7,7 @@
 
 namespace dxvk {
 
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(DXVK_BUILD_UMD)
   #define IOCTL_SHARED_GPU_RESOURCE_OPEN             CTL_CODE(FILE_DEVICE_VIDEO, 1, METHOD_BUFFERED, FILE_WRITE_ACCESS)
 
   HANDLE openKmtHandle(HANDLE kmt_handle) {

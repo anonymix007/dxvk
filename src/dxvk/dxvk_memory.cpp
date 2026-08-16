@@ -280,12 +280,14 @@ namespace dxvk {
 
 
   DxvkResourceAllocation::~DxvkResourceAllocation() {
+#ifndef DXVK_BUILD_UMD
     if (unlikely(m_kmtLocal)) {
       D3DKMT_DESTROYALLOCATION destroy = { };
       destroy.hDevice = m_allocator->device()->kmtLocal();
       destroy.hResource = m_kmtLocal;
       D3DKMTDestroyAllocation(&destroy);
     }
+#endif
 
     if (m_buffer) {
       if (unlikely(m_bufferViews))
@@ -336,7 +338,8 @@ namespace dxvk {
 
 
   void DxvkResourceAllocation::initKmtHandles(VkExternalMemoryHandleTypeFlagBits handleType) {
-#ifdef _WIN32
+    // TODO: maybe just ignore D3DKMT_OPENRESOURCE* for UMD instead?
+#if defined(_WIN32) && !defined(DXVK_BUILD_UMD)
     auto device = m_allocator->device();
     auto vk = device->vkd();
 

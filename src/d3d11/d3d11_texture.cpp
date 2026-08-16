@@ -732,6 +732,7 @@ namespace dxvk {
   
   
   void D3D11CommonTexture::ExportImageInfo() {
+#ifndef DXVK_BUILD_UMD
     struct d3dkmt_d3d11_desc desc = { };
     desc.dxgi.size = sizeof(desc);
     desc.dxgi.version = 4;
@@ -825,6 +826,7 @@ namespace dxvk {
 
     if (hSharedHandle != INVALID_HANDLE_VALUE)
       CloseHandle(hSharedHandle);
+#endif
   }
   
   

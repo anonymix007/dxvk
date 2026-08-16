@@ -34,6 +34,10 @@ extern "C" {
       dxvkAdapter  = dxgiVkAdapter->GetDXVKAdapter();
       dxvkInstance = dxgiVkAdapter->GetDXVKInstance();
     } else {
+#ifdef DXVK_BUILD_UMD
+      Logger::err("D3D11InternalCreateDevice: UMD must provide a DXVK adapter");
+      return E_INVALIDARG;
+#else
       Logger::warn("D3D11InternalCreateDevice: Adapter is not a DXVK adapter");
       DXGI_ADAPTER_DESC desc;
       pAdapter->GetDesc(&desc);
@@ -49,6 +53,7 @@ extern "C" {
 
       if (dxvkAdapter == nullptr)
         return E_FAIL;
+#endif
     }
     
     // Feature levels to probe if the
@@ -137,6 +142,10 @@ extern "C" {
       return E_INVALIDARG;
     
     if (!pAdapter) {
+#ifdef DXVK_BUILD_UMD
+      Logger::err("D3D11CreateDevice: UMD must provide adapter");
+      return E_INVALIDARG;
+#else
       // We'll treat everything as hardware, even if the
       // Vulkan device is actually a software device.
       if (DriverType != D3D_DRIVER_TYPE_HARDWARE)
@@ -162,6 +171,7 @@ extern "C" {
         Logger::err("D3D11CreateDevice: No default adapter available");
         return hr;
       }
+#endif
     } else {
       // We should be able to query the DXGI factory from the adapter
       if (FAILED(dxgiAdapter->GetParent(__uuidof(IDXGIFactory), reinterpret_cast<void**>(&dxgiFactory)))) {
@@ -189,6 +199,10 @@ extern "C" {
     
     // Create the swap chain, if requested
     if (ppSwapChain) {
+#ifdef DXVK_BUILD_UMD
+      Logger::err("D3D11CreateDevice: UMD must not require swapchain");
+      return E_INVALIDARG;
+#else
       DXGI_SWAP_CHAIN_DESC desc = *pSwapChainDesc;
       hr = dxgiFactory->CreateSwapChain(device.ptr(), &desc, ppSwapChain);
 
@@ -196,6 +210,7 @@ extern "C" {
         Logger::err("D3D11CreateDevice: Failed to create swap chain");
         return hr;
       }
+#endif
     }
     
     // Write back whatever info the application requested
