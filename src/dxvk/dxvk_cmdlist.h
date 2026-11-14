@@ -127,11 +127,13 @@ namespace dxvk {
      *
      * \param [in] device DXVK device
      * \param [in] queue Queue to submit to
+     * \param [in] frameBoundary The frame boundary info
      * \returns Submission return value
      */
     VkResult submit(
-            DxvkDevice*           device,
-            VkQueue               queue);
+            DxvkDevice*               device,
+            VkQueue                   queue,
+            const VkFrameBoundaryEXT* frameBoundary);
 
     /**
      * \brief Resets object
@@ -169,6 +171,14 @@ namespace dxvk {
     uint32_t            sparseCmd   = 0;
 
     std::array<VkCommandBuffer, uint32_t(DxvkCmdBuffer::Count)> cmdBuffers = { };
+
+    small_vector<VkImage, 8> m_writtenPrimaries;
+
+    void appendPrimary(VkImage image) {
+      // Linear search is fine here
+      if (std::find(m_writtenPrimaries.begin(), m_writtenPrimaries.end(), image) == m_writtenPrimaries.end())
+        m_writtenPrimaries.push_back(image);
+    }
   };
 
 
@@ -337,6 +347,20 @@ namespace dxvk {
     }
 
     /**
+     * \brief Tracks an object if it's a written primary
+     *
+     * \param [in] object Object to track
+     * \param [in] access Resource access mode
+     */
+    template<typename T>
+    void trackWrittenPrimary(T* object, DxvkAccess access) {
+      // Only images can be primaries, neither buffers nor paged resources
+      if constexpr (std::is_same_v<T, DxvkImage>)
+        if (unlikely(m_trackWrittenPrimaries && access == DxvkAccess::Write && object->info().primary))
+          m_cmd.appendPrimary(object->handle());
+    }
+
+    /**
      * \brief Tracks a resource with access mode
      *
      * Keeps the object alive and tracks resource access for
@@ -347,18 +371,24 @@ namespace dxvk {
      */
     template<typename T>
     void track(Rc<T>&& object, DxvkAccess access) {
+      trackWrittenPrimary(object.ptr(), access);
+
       if (object->trackId(m_trackingId, access))
         m_objectTracker.track<DxvkResourceRef>(std::move(object), access);
     }
 
     template<typename T>
     void track(const Rc<T>& object, DxvkAccess access) {
+      trackWrittenPrimary(object.ptr(), access);
+
       if (object->trackId(m_trackingId, access))
         m_objectTracker.track<DxvkResourceRef>(object.ptr(), access);
     }
 
     template<typename T>
     void track(T* object, DxvkAccess access) {
+      trackWrittenPrimary(object, access);
+
       if (object->trackId(m_trackingId, access))
         m_objectTracker.track<DxvkResourceRef>(object, access);
     }
@@ -1389,6 +1419,8 @@ namespace dxvk {
     std::vector<DxvkGraphicsPipeline*> m_pipelines;
 
     bool m_descriptorHeapInvalidated = false;
+
+    bool m_trackWrittenPrimaries = false;
 
     std::array<int32_t, uint32_t(DxvkCmdBuffer::Count)> m_checkpointIds = {};
 

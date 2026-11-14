@@ -58,8 +58,9 @@ namespace dxvk {
 
 
   VkResult DxvkCommandSubmission::submit(
-          DxvkDevice*           device,
-          VkQueue               queue) {
+          DxvkDevice*               device,
+          VkQueue                   queue,
+          const VkFrameBoundaryEXT* frameBoundary) {
     auto vk = device->vkd();
 
     VkSubmitInfo2 submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO_2 };
@@ -78,6 +79,9 @@ namespace dxvk {
       submitInfo.signalSemaphoreInfoCount = m_semaphoreSignals.size();
       submitInfo.pSignalSemaphoreInfos = m_semaphoreSignals.data();
     }
+
+    if (frameBoundary)
+      submitInfo.pNext = frameBoundary;
 
     VkResult vr = VK_SUCCESS;
 
@@ -225,7 +229,8 @@ namespace dxvk {
   : m_device        (device),
     m_vkd           (device->vkd()),
     m_vki           (device->vki()),
-    m_checkpoints   (device->getCheckpointBuffer()) {
+    m_checkpoints   (device->getCheckpointBuffer()),
+    m_trackWrittenPrimaries(m_device->features().extFrameBoundary.frameBoundary) {
     const auto& graphicsQueue = m_device->queues().graphics;
     const auto& transferQueue = m_device->queues().transfer;
 
@@ -269,6 +274,16 @@ namespace dxvk {
       bool isLast  = i == m_cmdSubmissions.size() - 1;
 
       const auto& cmd = m_cmdSubmissions[i];
+      const VkFrameBoundaryEXT* pFrameBoundary = nullptr;
+
+      VkFrameBoundaryEXT frameBoundary = { VK_STRUCTURE_TYPE_FRAME_BOUNDARY_EXT };
+      if (unlikely(m_trackWrittenPrimaries && cmd.m_writtenPrimaries.size() > 0)) {
+        // TODO: provide reasonable frameID and flags
+        frameBoundary.pImages = cmd.m_writtenPrimaries.data();
+        frameBoundary.imageCount = cmd.m_writtenPrimaries.size();
+
+        pFrameBoundary = &frameBoundary;
+      }
 
       auto sparseBind = cmd.sparseBind
         ? &m_cmdSparseBinds[cmd.sparseCmd]
@@ -309,7 +324,7 @@ namespace dxvk {
         m_commandSubmission.signalSemaphore(semaphores.transfer,
           ++timelines.transfer, VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT);
 
-        if ((status = m_commandSubmission.submit(m_device, transfer.queueHandle)))
+        if ((status = m_commandSubmission.submit(m_device, transfer.queueHandle, pFrameBoundary)))
           return status;
 
         m_commandSubmission.waitSemaphore(semaphores.transfer,
@@ -351,7 +366,7 @@ namespace dxvk {
         ++timelines.graphics, VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT);
 
       // Finally, submit all graphics commands of the current submission
-      if ((status = m_commandSubmission.submit(m_device, graphics.queueHandle)))
+      if ((status = m_commandSubmission.submit(m_device, graphics.queueHandle, pFrameBoundary)))
         return status;
 
       // If there are WSI semaphores involved, do another submit only
@@ -361,7 +376,7 @@ namespace dxvk {
         m_commandSubmission.signalSemaphore(semaphores.graphics,
           ++timelines.graphics, VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT);
 
-        if ((status = m_commandSubmission.submit(m_device, graphics.queueHandle)))
+        if ((status = m_commandSubmission.submit(m_device, graphics.queueHandle, nullptr)))
           return status;
       }
 
@@ -371,7 +386,7 @@ namespace dxvk {
         m_commandSubmission.waitSemaphore(semaphores.graphics,
           timelines.graphics, VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT);
 
-        if (isLast && (status = m_commandSubmission.submit(m_device, transfer.queueHandle)))
+        if (isLast && (status = m_commandSubmission.submit(m_device, transfer.queueHandle, nullptr)))
           return status;
       }
     }

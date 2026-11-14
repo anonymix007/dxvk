@@ -67,6 +67,9 @@ namespace dxvk {
     // Image is likely to have a short lifetime
     VkBool32 transient = VK_FALSE;
 
+    // Image can be displayed directly on the screen
+    VkBool32 primary = VK_FALSE;
+
     // Image view formats that can
     // be used with this image
     uint32_t viewFormatCount = 0;

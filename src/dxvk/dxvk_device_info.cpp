@@ -27,6 +27,7 @@ namespace dxvk {
     HANDLE_EXT(extDynamicRenderingUnusedAttachments); \
     HANDLE_EXT(extExtendedDynamicState3);          \
     HANDLE_EXT(extFragmentShaderInterlock);        \
+    HANDLE_EXT(extFrameBoundary);                  \
     HANDLE_EXT(extFullScreenExclusive);            \
     HANDLE_EXT(extGraphicsPipelineLibrary);        \
     HANDLE_EXT(extHdrMetadata);                    \
@@ -990,6 +991,9 @@ namespace dxvk {
       /* Enables client API features */
       ENABLE_EXT_FEATURE(extFragmentShaderInterlock, fragmentShaderSampleInterlock, false),
       ENABLE_EXT_FEATURE(extFragmentShaderInterlock, fragmentShaderPixelInterlock, false),
+
+      /* Enables frame boundary tracking for offscreen rendering */
+      ENABLE_EXT_FEATURE(extFrameBoundary, frameBoundary, false),
 
       /* Windows-only extension to work around driver-side FSE issues */
       ENABLE_EXT(extFullScreenExclusive, false),
