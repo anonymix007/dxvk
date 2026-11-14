@@ -67,6 +67,10 @@ namespace dxvk {
       imageInfo.sharing.handle = hSharedHandle;
     }
 
+    if (m_desc.MiscFlags & D3D11_RESOURCE_MISC_SHARED_DISPLAYABLE) {
+      imageInfo.primary = VK_TRUE;
+    }
+
     if (!pDevice->GetOptions()->disableMsaa)
       DecodeSampleCount(m_desc.SampleDesc.Count, &imageInfo.sampleCount);
 
